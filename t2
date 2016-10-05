@@ -2,6 +2,7 @@
 from __future__ import print_function
 from selenium import webdriver
 import os,sys,json
+import click
 
 def create_driver():
     dcap = dict(webdriver.DesiredCapabilities.PHANTOMJS)
@@ -47,6 +48,7 @@ class T2():
         json.dump(courses, f)
         return courses
 
+
     def list_assignments(self, course_name):
         driver = self.driver
         driver.get(self.base_url + "/portal")
@@ -56,9 +58,7 @@ class T2():
         return [a.text for a in driver.find_element_by_tag_name('table').find_elements_by_css_selector('td[headers="title"] > h4 > a')]
 
 
-    def upload_file(self, file_str):
-        course_name = "CS-4290-A, CS-6290-A, ..."
-        assignment_name = "Project 2"
+    def upload_file(self, course_name, assignment_name, file_str):
         driver = self.driver
         driver.get(self.base_url + "/portal")
         driver.find_element_by_css_selector('a[title="' + course_name + '"] > span').click()
@@ -70,47 +70,48 @@ class T2():
         #driver.find_element_by_id("Assignment.view_submission_honor_pledge_yes").click()
         driver.find_element_by_name("post").click()
 
-def display_help():
-    print("Usage: t2 (login|list)")
-
+@click.group()
 def main():
-    if len(sys.argv) > 1:
-        subcommand = sys.argv[1]
-    else:
-        display_help()
-        sys.exit(0)
+    pass
 
-    if subcommand == 'login':
-#Add ability to cach login credentials
-        pass
-    elif subcommand == 'list':
-        if os.path.exists('.t2-cache'):
-            f = open('.t2-cache')
-            courses = json.load(f)
-        else:
-            t2 = T2()
-            t2.login()
-            courses = t2.list_courses()
-        for c in courses:
-            print(c)
-    elif subcommand == 'la':
-        course = sys.argv[2]
+@main.command()
+def login(**kwargs):
+    pass
+
+@main.command()
+def list(**kwargs):
+    if os.path.exists('.t2-cache'):
+        f = open('.t2-cache')
+        courses = json.load(f)
+    else:
         t2 = T2()
         t2.login()
-        for ass in t2.list_assignments(course):
-            print(ass)
-    elif subcommand == 'upload':
+        courses = t2.list_courses()
+    for c in courses:
+        print(c)
+
+@main.command()
+@click.argument('course')
+def la(**kwargs):
+    t2 = T2()
+    t2.login()
+    assignment_list = t2.list_assignments(kwargs['course'])
+    for assignment in assignment_list:
+        print(assignment)
+
+@main.command()
+@click.argument('course')
+@click.argument('assignment')
+@click.argument('a_file')
+def upload(**kwargs):
+    pass
         #a_file = sys.argv[3]
         #if os.is_file(a_file):
             #t2 = T2()
             #t2.login()
-            #t2.upload_file(a_file)
+            #t2.upload_file(course, assignment, a_file)
         #else:
             #raise ValueError('Invalid Filename')
-        pass
-    else:
-        display_help()
-
 
 if __name__ == "__main__":
     main()
