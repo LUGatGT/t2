@@ -1,21 +1,35 @@
 #!/usr/bin/env python
-from __future__ import print_function
 from selenium import webdriver
-import os,sys,json
-import click
+import selenium
+import os,sys
 
 def create_driver():
     dcap = dict(webdriver.DesiredCapabilities.PHANTOMJS)
     dcap["phantomjs.page.settings.userAgent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/53 (KHTML, like Gecko) Chrome/15.0.87"
-    return webdriver.PhantomJS(desired_capabilities=dcap)
+    try:
+        phantom = webdriver.PhantomJS(desired_capabilities=dcap)
+    except selenium.common.exceptions.WebDriverException as e:
+        print("Please install phantomjs for this script to work.")
+        sys.exit(1)
+    return phantom
+
+
+class config():
+    def __init__(self):
+        t2_dir = os.path.join(os.path.expanduser('~'), '.t2')
+        self.cache_dir = t2_dir
+        self.config_dir = t2_dir
+        self.username_file = os.path.join(self.config_dir, 'username')
+        self.password_file = os.path.join(self.config_dir, 'password')
+        self.course_cache = os.path.join(self.config_dir, 'courses')
 
 class T2():
     def __init__(self):
+        self.config = config()
         self.driver = create_driver()
         self.driver.implicitly_wait(30)
         self.base_url = "https://t-square.gatech.edu/"
         self.logged_in = False
-        self.cache_file = '.t2-cache'
 
 
     def close(self):
@@ -26,9 +40,9 @@ class T2():
         if self.logged_in:
             return
         if not user:
-            user = open('.username').read().strip()
+            user = open(self.config.username_file).read().strip()
         if not password:
-            password = open('.password').read().strip()
+            password = open(self.config.password_file).read().strip()
         driver = self.driver
         driver.get(self.base_url + "/portal")
         driver.find_element_by_id("loginLink1").click()
@@ -44,8 +58,6 @@ class T2():
         driver = self.driver
         driver.get(self.base_url + "/portal")
         courses = [link.get_attribute('title') for link in driver.find_element_by_id("siteLinkList").find_elements_by_css_selector('li > a')]
-        f = open(self.cache_file, 'w')
-        json.dump(courses, f)
         return courses
 
 
@@ -75,50 +87,3 @@ class T2():
         #driver.find_element_by_id("Assignment.view_submission_honor_pledge_yes").click()
         driver.find_element_by_name("post").click()
         driver.save_screenshot('proof.png')
-
-@click.group()
-def main():
-    pass
-
-@main.command()
-@click.option('--username', '-u', help='Username')
-@click.password_option()
-def login(**kwargs):
-    t2 = T2()
-    t2.login()
-    t2.close()
-
-@main.command()
-def list(**kwargs):
-    if os.path.exists('.t2-cache'):
-        f = open('.t2-cache')
-        courses = json.load(f)
-    else:
-        t2 = T2()
-        t2.login()
-        courses = t2.list_courses()
-        t2.close()
-    for c in courses:
-        print(c)
-
-@main.command()
-@click.argument('course')
-def la(**kwargs):
-    t2 = T2()
-    t2.login()
-    assignment_list = t2.list_assignments(kwargs['course'])
-    t2.close()
-    for assignment in assignment_list:
-        print(assignment)
-
-@main.command()
-@click.argument('course')
-@click.argument('assignment')
-@click.argument('to_upload', nargs=-1, required=True, type=click.Path(exists=True))
-def submit(**kwargs):
-    t2 = T2()
-    t2.login()
-    t2.upload_files_to_assignment(kwargs['course'], kwargs['assignment'], kwargs['to_upload'])
-
-if __name__ == "__main__":
-    main()

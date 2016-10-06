@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+from __future__ import print_function
+from t2 import T2
+from t2 import config
+import click
+import json
+import os
+
+conf = config()
+
+@click.group()
+def main():
+    pass
+
+@main.command()
+def login(**kwargs):
+    t2 = T2()
+    t2.login()
+    t2.close()
+
+@main.command()
+def list(**kwargs):
+    if os.path.exists(conf.course_cache):
+        print(conf.course_cache)
+        f = open(conf.course_cache)
+        courses = json.load(f)
+        f.close()
+    else:
+        t2 = T2()
+        t2.login()
+        courses = t2.list_courses()
+        t2.close()
+        f = open(self.config.course_cache, 'w')
+        json.dump(courses, f)
+        f.close()
+    for c in courses:
+        print(c)
+
+@main.command()
+@click.argument('course')
+def la(**kwargs):
+    t2 = T2()
+    t2.login()
+    assignment_list = t2.list_assignments(kwargs['course'])
+    t2.close()
+    for assignment in assignment_list:
+        print(assignment)
+
+@main.command()
+@click.argument('course')
+@click.argument('assignment')
+@click.argument('to_upload', nargs=-1, required=True, type=click.Path(exists=True))
+def submit(**kwargs):
+    t2 = T2()
+    t2.login()
+    t2.upload_files_to_assignment(kwargs['course'], kwargs['assignment'], kwargs['to_upload'])
+
+if __name__ == "__main__":
+    main()
