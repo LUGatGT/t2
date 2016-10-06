@@ -115,7 +115,7 @@ def la(**kwargs):
 @click.argument('course')
 @click.argument('assignment')
 @click.argument('to_upload', nargs=-1, required=True, type=click.Path(exists=True))
-def upload(**kwargs):
+def submit(**kwargs):
     t2 = T2()
     t2.login()
     t2.upload_files_to_assignment(kwargs['course'], kwargs['assignment'], kwargs['to_upload'])
