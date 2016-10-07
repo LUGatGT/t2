@@ -9,7 +9,9 @@ import os
 conf = config()
 
 @click.group()
-def main():
+@click.option('--cache/--no-cache', default=True)
+def main(cache):
+    conf.cache = cache
     pass
 
 @main.command()
@@ -20,7 +22,7 @@ def login(**kwargs):
 
 @main.command()
 def list(**kwargs):
-    if os.path.exists(conf.course_cache):
+    if conf.cache and os.path.exists(conf.course_cache):
         print(conf.course_cache)
         f = open(conf.course_cache)
         courses = json.load(f)
@@ -30,9 +32,10 @@ def list(**kwargs):
         t2.login()
         courses = t2.list_courses()
         t2.close()
-        f = open(self.config.course_cache, 'w')
-        json.dump(courses, f)
-        f.close()
+        if conf.cache:
+            f = open(self.config.course_cache, 'w')
+            json.dump(courses, f)
+            f.close()
     for c in courses:
         print(c)
 

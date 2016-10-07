@@ -2,6 +2,7 @@
 from selenium import webdriver
 import selenium
 import os,sys
+import json
 
 def create_driver():
     dcap = dict(webdriver.DesiredCapabilities.PHANTOMJS)
@@ -15,13 +16,21 @@ def create_driver():
 
 
 class config():
+    # TODO Eliminate the need for this global state
+    # Currently used determining --no-cache is set
+    # http://code.activestate.com/recipes/66531/
+    __shared_state = {}
     def __init__(self):
+        self.__dict__ = self.__shared_state
         t2_dir = os.path.join(os.path.expanduser('~'), '.t2')
         self.cache_dir = t2_dir
         self.config_dir = t2_dir
+
         self.username_file = os.path.join(self.config_dir, 'username')
         self.password_file = os.path.join(self.config_dir, 'password')
-        self.course_cache = os.path.join(self.config_dir, 'courses')
+
+        self.course_cache = os.path.join(self.cache_dir, 'courses')
+        self.cookie_file = os.path.join(self.cache_dir, 'cookies')
 
 class T2():
     def __init__(self):
@@ -37,13 +46,24 @@ class T2():
     
 
     def login(self, user=None, password=None):
+        driver = self.driver
         if self.logged_in:
             return
+
+        print("Caching is " + str(self.config.cache))
+        if self.config.cache and os.path.exists(self.config.cookie_file):
+            f = open(self.config.cookie_file)
+            cookies = json.load(f)
+            f.close()
+            driver.get(self.base_url) # Try this if it doesn't work
+            for cookie in cookies:
+                self.driver.add_cookie(cookie)
+            return
+
         if not user:
             user = open(self.config.username_file).read().strip()
         if not password:
             password = open(self.config.password_file).read().strip()
-        driver = self.driver
         driver.get(self.base_url + "/portal")
         driver.find_element_by_id("loginLink1").click()
         driver.find_element_by_id("password").clear()
@@ -52,6 +72,10 @@ class T2():
         driver.find_element_by_id("username").send_keys(user)
         driver.find_element_by_name("submit").click()
         self.logged_in = True
+        if self.config.cache:
+            f = open(self.config.cookie_file, "w")
+            json.dump(driver.get_cookies(), f)
+            f.close()
 
 
     def list_courses(self):
