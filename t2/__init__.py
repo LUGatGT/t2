@@ -8,7 +8,7 @@ def create_driver():
     dcap = dict(webdriver.DesiredCapabilities.PHANTOMJS)
     dcap["phantomjs.page.settings.userAgent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/53 (KHTML, like Gecko) Chrome/15.0.87"
     try:
-        phantom = webdriver.PhantomJS(desired_capabilities=dcap)
+        phantom = webdriver.PhantomJS(desired_capabilities=dcap, service_log_path=config().phantomjs_logfile)
     except selenium.common.exceptions.WebDriverException as e:
         print("Please install phantomjs for this script to work.")
         sys.exit(1)
@@ -25,6 +25,8 @@ class config():
         t2_dir = os.path.join(os.path.expanduser('~'), '.t2')
         self.cache_dir = t2_dir
         self.config_dir = t2_dir
+        self.crash_dir = os.path.join(t2_dir, 'crashes')
+        self.phantomjs_logfile = os.path.join(t2_dir, 'ghostdriver.log')
 
         self.username_file = os.path.join(self.config_dir, 'username')
         self.password_file = os.path.join(self.config_dir, 'password')
@@ -50,7 +52,6 @@ class T2():
         if self.logged_in:
             return
 
-        print("Caching is " + str(self.config.cache))
         if self.config.cache and os.path.exists(self.config.cookie_file):
             f = open(self.config.cookie_file)
             cookies = json.load(f)

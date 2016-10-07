@@ -5,6 +5,9 @@ from t2 import config
 import click
 import json
 import os
+import traceback
+import base64
+from selenium.common.exceptions import WebDriverException
 
 conf = config()
 
@@ -59,4 +62,22 @@ def submit(**kwargs):
     t2.upload_files_to_assignment(kwargs['course'], kwargs['assignment'], kwargs['to_upload'])
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except WebDriverException as e:
+        if not os.path.exists(conf.crash_dir):
+            os.mkdir(conf.crash_dir)
+
+        process_crash_dir = os.path.join(conf.crash_dir, str(os.getpid()))
+        os.mkdir(process_crash_dir)
+
+        with open(os.path.join(process_crash_dir, 'stacktrace'), 'w') as f:
+            traceback.print_exc(file=f)
+        with open(os.path.join(process_crash_dir, 'screen.png'), 'wb') as f:
+            f.write(base64.b64decode(e.screen))
+
+        print("Error: " + json.loads(e.msg)["errorMessage"])
+        print("View more information at: " + str(process_crash_dir))
+        if os.path.exists(os.path.join(conf.config_dir, 'debug')):
+            raise
+
